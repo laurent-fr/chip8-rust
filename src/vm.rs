@@ -8,11 +8,9 @@ pub struct Vm {
     stack: [u16;16],
     reg_dt:u8,
     reg_st:u8,
-    screen: [u8;(32*64)],
+    screen: [u8; ::SCREEN_SIZE],
     key:u8
 }
-
-const SCREEN_SIZE:usize = 32*64;
 
 impl Vm {
 
@@ -26,7 +24,7 @@ impl Vm {
             stack: [0;16],
             reg_dt: 0,
             reg_st: 0,
-            screen: [0;SCREEN_SIZE],
+            screen: [0;::SCREEN_SIZE],
             key:0
         }
     }
@@ -52,7 +50,7 @@ impl Vm {
             match instr1 & 0xf0 {
                 0x00 => {
                     match instr2 {
-                        0xE0 => self.screen = [0;SCREEN_SIZE], // CLS
+                        0xE0 => self.screen = [0; ::SCREEN_SIZE], // CLS
                         0xEE => { // RET
                             self.pc = self.stack[self.reg_sp as usize];
                             self.reg_sp-=1;

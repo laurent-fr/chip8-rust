@@ -11,10 +11,6 @@ pub struct Engine<'a> {
     vm: &'a mut Vm
 }
 
-const WIDTH:u32 = 64;
-const HEIGHT:u32 = 32 ;
-const SCALING:u32 = 12;
-
 const BK:(u8,u8,u8) = (100,100,255);
 const FK:(u8,u8,u8) = (200,200,255);
 
@@ -28,7 +24,7 @@ impl<'a> Engine<'a> {
     pub fn run(&mut self) {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
-        let window = video_subsystem.window("rust-sdl2 demo: Video", WIDTH*SCALING, HEIGHT*SCALING)
+        let window = video_subsystem.window("rust-sdl2 demo: Video", ::WIDTH*::SCALING, ::HEIGHT*::SCALING)
             .position_centered()
             .opengl()
             .build()
