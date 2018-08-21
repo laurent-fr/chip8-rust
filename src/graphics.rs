@@ -9,6 +9,14 @@ pub struct Graphics {
 
 }
 
+const WIDTH:u32 = 64;
+const HEIGHT:u32 = 32 ;
+const SCALING:u32 = 12;
+
+const BK:(u8,u8,u8) = (100,100,255);
+const FK:(u8,u8,u8) = (200,200,255);
+
+
 impl Graphics {
 
     pub fn new() -> Graphics {
@@ -18,7 +26,7 @@ impl Graphics {
     pub fn run(&self) {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
-        let window = video_subsystem.window("rust-sdl2 demo: Video", 64*12, 32*12)
+        let window = video_subsystem.window("rust-sdl2 demo: Video", WIDTH*SCALING, HEIGHT*SCALING)
             .position_centered()
             .opengl()
             .build()
@@ -26,7 +34,7 @@ impl Graphics {
 
         let mut canvas = window.into_canvas().build().unwrap();
 
-        canvas.set_draw_color(Color::RGB(255, 0, 0));
+        canvas.set_draw_color(Color::RGB(BK.0, BK.1, BK.2));
         canvas.clear();
         canvas.present();
     
@@ -46,5 +54,11 @@ impl Graphics {
             // The rest of the game loop goes here...
         }
     }
+
+    fn set_pixel(x:u32,y:u32) {
+
+    }
+
+
 
 }
