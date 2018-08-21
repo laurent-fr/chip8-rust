@@ -1,13 +1,17 @@
 extern crate chip8;
 
-use chip8::graphics::Graphics;
+use chip8::engine::Engine;
+use chip8::vm::Vm;
 
 fn main() {
 
     println!("CHIP-8 Emulator");
 
-    let graph = Graphics::new();
+    let mut vm = Vm::new();
+    let mut engine = Engine::new(&mut vm);
 
-    graph.run();
+    engine.run();
+
+
 
 }
