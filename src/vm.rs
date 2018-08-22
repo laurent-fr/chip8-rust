@@ -8,8 +8,8 @@ pub struct Vm {
     stack: [u16;16],
     reg_dt:u8,
     reg_st:u8,
-    screen: [u8; ::SCREEN_SIZE],
-    key:u8
+    pub screen: [u8; ::SCREEN_SIZE],
+    pub key:u8
 }
 
 impl Vm {
@@ -29,14 +29,18 @@ impl Vm {
         }
     }
 
-    pub fn cycle(&mut self) {
-        self.decode_instruction();
+    
+    pub fn update_timers(&mut self) {
+        if self.reg_dt>0 {
+            self.reg_dt-=1;
+        }
+
+        if self.reg_st>0 {
+            self.reg_st-=1;
+        }
     }
 
-    fn update_timers() {
-    }
-
-    fn decode_instruction(&mut self) {
+    pub fn cycle(&mut self) -> bool {
 
             let instr1 = self.mem[self.pc as usize];
             let instr2 = self.mem[self.pc as usize +1];
@@ -60,13 +64,13 @@ impl Vm {
                 },
                 0x10 => { // 1nnn - JMP addr
                     self.pc = addr; 
-                    return;
+                    return false;
                 },
                 0x20 => {
                     // 2nnn - CALL addr 
                     self.stack[self.reg_sp as usize] = self.pc ;
                     self.reg_sp+=1;
-                    return;
+                    return false;
                 },
                 0x30 => { 
                     // 3xkk - SE Vx, byte 
@@ -120,16 +124,20 @@ impl Vm {
                 0xa0 => self.reg_i = addr, // LD I, addr
                 0xb0 => { // JP V0, addr
                     self.pc = addr + self.reg[0] as u16;
-                    return;
+                    return false;
                 },
                 0xc0 => {},
-                0xd0 => self.draw_sprite(self.reg[x], self.reg[y], n), // DRW Vx,Vy,nibble
+                0xd0 => { 
+                    self.draw_sprite(self.reg[x], self.reg[y], n); // DRW Vx,Vy,nibble
+                    self.pc +=2;
+                    return true;
+                },
                 0xe0 => {},
                 0xf0 => match instr2 {
                     0x07 => self.reg[x] = self.reg_dt , // LD Vx, DT
                     0x0a => {
                         // LD Vx,K
-                        if self.key == 0 {return ;}
+                        if self.key == 0 {return false;}
                         self.reg[x] = self.key;
                     },
                     0x15 => self.reg_dt = self.reg[x], // LD DT, Vx
@@ -145,6 +153,8 @@ impl Vm {
             }
 
             self.pc+=2;
+
+            return false;
     }
 
     fn draw_sprite(&self, _x:u8, _y:u8, _nibble:u8) {
