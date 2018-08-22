@@ -4,4 +4,8 @@ version = "0.1.0"
 authors = ["Laurent"]
 
 [dependencies]
-sdl2 = "0.31"
+time = "0.1.40"
+
+[dependencies.sdl2]
+version = "0.31.0"
+default-features = false

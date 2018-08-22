@@ -2,3 +2,4 @@
 **/*.rs.bk
 *.dll
 .vscode
+Cargo.lock

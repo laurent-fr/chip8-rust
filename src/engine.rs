@@ -1,11 +1,15 @@
 extern crate sdl2;
+extern crate time;
 
 use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
+use sdl2::rect::Rect;
+
 use std::time::Duration;
+
 
 
 use vm::Vm;
@@ -16,7 +20,7 @@ pub struct Engine<'a> {
 }
 
 const BK:(u8,u8,u8) = (100,100,255);
-const FK:(u8,u8,u8) = (200,200,255);
+const FK:(u8,u8,u8) = (210,210,255);
 
 
 impl<'a> Engine<'a> {
@@ -29,7 +33,7 @@ impl<'a> Engine<'a> {
         let sdl_context = sdl2::init().unwrap();
         let audio_subsystem = sdl_context.audio().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
-        let window = video_subsystem.window("rust-sdl2 demo: Video", ::WIDTH*::SCALING, ::HEIGHT*::SCALING)
+        let window = video_subsystem.window("CHIP-8 Emulator", ::WIDTH*::SCALING, ::HEIGHT*::SCALING)
             .position_centered()
             .opengl()
             .build()
@@ -42,6 +46,10 @@ impl<'a> Engine<'a> {
         canvas.present();
     
         let mut event_pump = sdl_context.event_pump().unwrap();
+
+        let mut now = time::precise_time_ns();
+
+        self.draw_screen(&mut canvas);
 
         'running: loop {
             for event in event_pump.poll_iter() {
@@ -69,9 +77,12 @@ impl<'a> Engine<'a> {
                             Keycode::X => self.vm.key = 13 ,
                             Keycode::C => self.vm.key = 14 ,
                             Keycode::V => self.vm.key = 15,
-                            _ => { }
+                            _ => self.vm.key = -1
                         }
+                    },
 
+                    Event::KeyUp {keycode: Some(_keycode), ..} => {
+                        self.vm.key = -1
                     },
 
                     _ => {}
@@ -81,7 +92,7 @@ impl<'a> Engine<'a> {
             ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
             // game loop ...
 
-            // set keyboard code
+            
 
             // cycle
             if self.vm.cycle() == true {
@@ -89,26 +100,38 @@ impl<'a> Engine<'a> {
             }
 
             // timers
-            self.vm.update_timers();
-
+            if now + ::VBL < time::precise_time_ns() {
+                now = time::precise_time_ns();
+                self.vm.update_timers();
+            }
             // sound
 
         }
     }
 
-    fn draw_byte(&self, _canvas:&mut Canvas<Window>, _x:u32,_y:u32,_data:u8) {
-
+    fn draw_byte(&self, canvas:&mut Canvas<Window>,x:i32,y:i32,data:u8) {
+            let mut d = data;
+            for i in 0..8 {
+                if d&0x80 == 0x80 {
+                    canvas.set_draw_color(Color::RGB(FK.0, FK.1, FK.2));
+                } else {
+                    canvas.set_draw_color(Color::RGB(BK.0, BK.1, BK.2));
+                }
+                canvas.fill_rect(Rect::new( (x*8+i)*::SCALING as i32, y *::SCALING as i32, ::SCALING, ::SCALING)).unwrap();
+                d <<=1 ;
+            }
     }
 
-    fn draw_screen(&self,_canvas:&mut Canvas<Window>) {
+    fn draw_screen(&self,canvas:&mut Canvas<Window>) {
 
-        for line in 0 .. ::HEIGHT -1 {
-            for col in 0 .. ::WIDTH/8 -1 {
-                let addr = (line*::WIDTH + col) as usize;
-                self.draw_byte(_canvas,col,line,self.vm.screen[addr]);
+        for line in 0 .. ::HEIGHT  {
+            for col in 0 .. ::WIDTH/8 {
+                let addr = (line*(::WIDTH/8) + col) as usize;
+            
+                self.draw_byte(canvas,col as i32,line as i32,self.vm.screen[addr]);
             }
         }
-        _canvas.present();
+        canvas.present();
     }
 
 

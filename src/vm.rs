@@ -9,7 +9,7 @@ pub struct Vm {
     reg_dt:u8,
     reg_st:u8,
     pub screen: [u8; ::SCREEN_SIZE],
-    pub key:u8
+    pub key:i8
 }
 
 impl Vm {
@@ -25,7 +25,7 @@ impl Vm {
             reg_dt: 0,
             reg_st: 0,
             screen: [0;::SCREEN_SIZE],
-            key:0
+            key: -1
         }
     }
 
@@ -54,7 +54,11 @@ impl Vm {
             match instr1 & 0xf0 {
                 0x00 => {
                     match instr2 {
-                        0xE0 => self.screen = [0; ::SCREEN_SIZE], // CLS
+                        0xE0 => {
+                            self.screen = [0; ::SCREEN_SIZE]; // CLS
+                            self.pc+=2;
+                            return true;
+                        },
                         0xEE => { // RET
                             self.pc = self.stack[self.reg_sp as usize];
                             self.reg_sp-=1;
@@ -137,8 +141,8 @@ impl Vm {
                     0x07 => self.reg[x] = self.reg_dt , // LD Vx, DT
                     0x0a => {
                         // LD Vx,K
-                        if self.key == 0 {return false;}
-                        self.reg[x] = self.key;
+                        if self.key == -1 {return false;}
+                        self.reg[x] = self.key as u8;
                     },
                     0x15 => self.reg_dt = self.reg[x], // LD DT, Vx
                     0x18 => self.reg_st = self.reg[x], // LD ST, Vx
