@@ -131,8 +131,8 @@ impl<'a> Engine<'a> {
     fn draw_screen(&self,canvas:&mut Canvas<Window>) {
 
         for line in 0 .. ::HEIGHT  {
-            for col in 0 .. ::WIDTH/8 {
-                let addr = (line*(::WIDTH/8) + col) as usize;
+            for col in 0 .. ::WIDTH_BYTE {
+                let addr = (line*::WIDTH_BYTE + col) as usize;
             
                 self.draw_byte(canvas,col as i32,line as i32,self.vm.screen[addr]);
             }
