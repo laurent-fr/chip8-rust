@@ -59,24 +59,30 @@ impl<'a> Engine<'a> {
                         break 'running
                     },
 
+                    // ORIGINAL     PC KEYBOARD
+                    // 1 2 3 C      1 2 3 4
+                    // 4 5 6 D      A Z E R
+                    // 7 8 9 E      Q S D F
+                    // A 0 B F      W X C V
+
                     Event::KeyDown {keycode: Some(keycode), ..} => {
                         match keycode {
-                            Keycode::Num1 => self.vm.key = 0 ,
-                            Keycode::Num2 => self.vm.key = 1 ,
-                            Keycode::Num3 => self.vm.key = 2 ,
-                            Keycode::Num4 => self.vm.key = 3 ,
-                            Keycode::A => self.vm.key = 4 ,
-                            Keycode::Z => self.vm.key = 5 ,
-                            Keycode::E => self.vm.key = 6 ,
-                            Keycode::R => self.vm.key = 7 ,
-                            Keycode::A => self.vm.key = 8 ,
-                            Keycode::S => self.vm.key = 9 ,
-                            Keycode::D => self.vm.key = 10 ,
-                            Keycode::F => self.vm.key = 11 ,
-                            Keycode::W => self.vm.key = 12 ,
-                            Keycode::X => self.vm.key = 13 ,
-                            Keycode::C => self.vm.key = 14 ,
-                            Keycode::V => self.vm.key = 15,
+                            Keycode::Num1 => self.vm.key = 0x01 ,
+                            Keycode::Num2 => self.vm.key = 0x02 ,
+                            Keycode::Num3 => self.vm.key = 0x03 ,
+                            Keycode::Num4 => self.vm.key = 0x0c ,
+                            Keycode::A => self.vm.key = 0x04 ,
+                            Keycode::Z => self.vm.key = 0x05 ,
+                            Keycode::E => self.vm.key = 0x06 ,
+                            Keycode::R => self.vm.key = 0x0d ,
+                            Keycode::A => self.vm.key = 0x07 ,
+                            Keycode::S => self.vm.key = 0x08 ,
+                            Keycode::D => self.vm.key = 0x09 ,
+                            Keycode::F => self.vm.key = 0x0e ,
+                            Keycode::W => self.vm.key = 0x0a ,
+                            Keycode::X => self.vm.key = 0x00 ,
+                            Keycode::C => self.vm.key = 0x0b ,
+                            Keycode::V => self.vm.key = 0x0f ,
                             _ => self.vm.key = -1
                         }
                     },

@@ -161,8 +161,21 @@ impl Vm {
             return false;
     }
 
-    fn draw_sprite(&self, _x:u8, _y:u8, _nibble:u8) {
+    fn draw_sprite(&self, x:u8, y:u8, nibble:u8) {
+        for line in y..y+nibble {
+            
+            /*let line_wrap:u32 = if line as u32 >::HEIGHT {
+                line as u32 %::HEIGHT ;
+                } else {
+                    line ;
+                } ;
+                
+            let addr1 = line_wrap*::WIDTH_BYTE + x/8;
+            let addr2 = line_wrap*::WIDTH_BYTE + (((x/8)+1) & (::WIDTH_BYTE -1)) ;*/
 
+            
+
+        }
     }
 
     fn unknown_opcode(&self) {
