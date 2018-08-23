@@ -5,6 +5,7 @@ authors = ["Laurent"]
 
 [dependencies]
 time = "0.1.40"
+rand = "0.5.5"
 
 [dependencies.sdl2]
 version = "0.31.0"

@@ -1,3 +1,6 @@
+extern crate rand;
+
+use rand::prelude::*;
 
 pub struct Vm {
     mem: [u8;0xfff],
@@ -102,41 +105,57 @@ impl Vm {
                     0x02 => self.reg[x] &= self.reg[y] ,// 8xy2 - AND Vx, Vy
                     0x03 => self.reg[x] ^= self.reg[y] , // 8xy3 - XOR Vx, Vy
                     0x04 => { // 8xy4 - ADD Vx, Vy
+                        self.reg[0x0f] = if (self.reg[x] as u32 + self.reg[y] as u32)>0xff { 1 } else { 0 } ;
                         self.reg[x] += self.reg[y];
-                        //self.reg[0x0f] = (x+y)>0xff ; 
                     } ,
                     0x05 => { // 8xy5 - SUB Vx, Vy
+                        self.reg[0x0f] =  if self.reg[x]>self.reg[y] { 1 } else { 0 }; 
                         self.reg[x] -= self.reg[y];
-                        //self.reg[0x0f] =  y>x ; 
+                        
                     } ,
                     0x06 => {  // 8xy6 - SHR Vx {, Vy} 
+                        self.reg[0x0f] = if self.reg[x]&0x01 == 1 { 1 } else { 0 } ;
                         self.reg[x] >>=1;
-                        //self.reg[0x0f] = x&0x01 ;
+                        
                     },
-                    0x07 => { // 7 - SUBN Vx, Vy
+                    0x07 => { // 8xy7 - SUBN Vx, Vy
+                        self.reg[0x0f] =  if self.reg[y]>self.reg[x] { 1 } else { 0 };
                         self.reg[x] = self.reg[y] - self.reg[x];
-                        //self.reg[0x0f] =  x>y ; 
                     } ,
                     0x0e => {  // 8xy6 - SHL Vx {, Vy} 
+                        self.reg[0x0f] = if self.reg[x]&0x80 == 0x80 { 1 } else { 0 } ;
                         self.reg[x] <<=1;
-                        //self.reg[0x0f] = x&0x80 ;
                     },
                     _ => self.unknown_opcode()
                      
                 },
-                0x90 => {},
+                0x90 => {
+                    // 9xy0 - SNE Vx, Vy
+                    if self.reg[x] != self.reg[y] {
+                        self.pc+=2;
+                    }
+                },
                 0xa0 => self.reg_i = addr, // LD I, addr
                 0xb0 => { // JP V0, addr
                     self.pc = addr + self.reg[0] as u16;
                     return false;
                 },
-                0xc0 => {},
+                0xc0 => {
+                    // Cxkk - RND Vx, byte
+                    let rnd:u8 = random();
+                    self.reg[x] = rnd & kk ;
+                },
                 0xd0 => { 
-                    self.draw_sprite(self.reg[x], self.reg[y], n); // DRW Vx,Vy,nibble
+                    self.draw_sprite(x, y, n); // DRW Vx,Vy,nibble
                     self.pc +=2;
                     return true;
                 },
-                0xe0 => {},
+                0xe0 => {
+                    // Ex9E - SKP Vx
+                    if self.key as i32 == self.reg[x] as i32 {
+                        self.pc+=2;
+                    }
+                },
                 0xf0 => match instr2 {
                     0x07 => self.reg[x] = self.reg_dt , // LD Vx, DT
                     0x0a => {
@@ -148,8 +167,28 @@ impl Vm {
                     0x18 => self.reg_st = self.reg[x], // LD ST, Vx
                     0x1e => self.reg_i += self.reg[x] as u16, // ADD I,Vx
                     0x29 => self.reg_i = self.reg[x] as u16 * 6, // LD F, Vx 
-                    0x33 => {},
-                    0x65 => {},
+                    0x33 => { 
+                        // Fx33 - LD B, Vx
+                        let mut number = self.reg[x];
+                        self.reg[self.reg_i as usize + 2 ] = number % 10;
+                        number /=10;
+                        self.reg[self.reg_i as usize + 1 ] = number % 10;
+                        number /=10;
+                        self.reg[self.reg_i as usize  ] = number % 10;
+                         
+                    },
+                    0x55 => {
+                        // Fx55 - LD [I], Vx
+                        for i in 0..x as usize {
+                            self.mem[self.reg_i as usize + i ] = self.reg[i];
+                        }
+                    },
+                    0x65 => {
+                        // Fx65 - LD Vx, [I]
+                         for i in 0..x as usize {
+                            self.reg[i] = self.mem[self.reg_i as usize + i ] ;
+                        }
+                    },
                     _ => self.unknown_opcode()
 
                 },
@@ -161,19 +200,36 @@ impl Vm {
             return false;
     }
 
-    fn draw_sprite(&self, x:u8, y:u8, nibble:u8) {
-        for line in y..y+nibble {
-            
-            /*let line_wrap:u32 = if line as u32 >::HEIGHT {
-                line as u32 %::HEIGHT ;
-                } else {
-                    line ;
-                } ;
-                
-            let addr1 = line_wrap*::WIDTH_BYTE + x/8;
-            let addr2 = line_wrap*::WIDTH_BYTE + (((x/8)+1) & (::WIDTH_BYTE -1)) ;*/
+    fn draw_sprite(&mut self, x_idx:usize, y_idx:usize, nibble:u8) {
+        
+            let x = self.reg[x_idx] as u32;
+            let y = self.reg[y_idx] as u32;
+            self.reg[0x0f] = 0;
 
+            for line in 0..nibble as u32 {
             
+                let mut line_wrap = (y+line) % ::HEIGHT;
+                let x_byte = x/8;
+                let addr1 = line_wrap*::WIDTH_BYTE + x_byte;;
+                let addr2 = line_wrap*::WIDTH_BYTE + (x_byte+1) & (::WIDTH_BYTE -1) ;
+
+                let old_byte1 = self.screen[addr1 as usize];
+                let new_byte1 = self.mem[(self.reg_i+nibble as u16) as usize] >> (x%8);
+            
+                self.screen[addr1 as usize] ^= new_byte1;
+                
+                if (old_byte1|new_byte1) != (old_byte1^new_byte1) {
+                    self.reg[0x0f] = 1;
+                }
+                
+                if addr2!=addr1 {
+                    let old_byte2 = self.screen[addr2 as usize];
+                    let new_byte2 = self.mem[(self.reg_i+nibble as u16) as usize] << (8-(x%8));
+                    self.screen[addr2 as usize] ^= new_byte2;
+                    if (old_byte2|new_byte2) != (old_byte2^new_byte2) {
+                        self.reg[0x0f] = 1;
+                    }
+                }      
 
         }
     }

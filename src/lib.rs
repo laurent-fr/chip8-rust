@@ -1,5 +1,6 @@
 extern crate sdl2;
 extern crate time;
+extern crate rand;
 
 const WIDTH:u32 = 64;
 const HEIGHT:u32 = 32 ;
