@@ -31,7 +31,7 @@ impl<'a> Engine<'a> {
 
     pub fn run(&mut self) {
         let sdl_context = sdl2::init().unwrap();
-        let audio_subsystem = sdl_context.audio().unwrap();
+        let _audio_subsystem = sdl_context.audio().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
         let window = video_subsystem.window("CHIP-8 Emulator", ::WIDTH*::SCALING, ::HEIGHT*::SCALING)
             .position_centered()
@@ -95,10 +95,10 @@ impl<'a> Engine<'a> {
                 }
             }
         
-            ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+            ::std::thread::sleep(Duration::new(0, ::SIMULATOR_SPEED as u32));
             // game loop ...
 
-            
+            //self.vm.debug();            
 
             // cycle
             if self.vm.cycle() == true {

@@ -2,8 +2,29 @@ extern crate rand;
 
 use rand::prelude::*;
 
+// specs : http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
+
+const FONT:[u8;5*16] = [
+    0xF0,0x90,0x90,0x90,0xF0,
+    0x20,0x60,0x20,0x20,0x70,
+    0xF0,0x10,0xF0,0x80,0xF0,
+    0xF0,0x10,0xF0,0x10,0xF0,
+    0x90,0x90,0xF0,0x10,0x10,
+    0xF0,0x80,0xF0,0x10,0xF0,
+    0xF0,0x80,0xF0,0x90,0xF0,
+    0xF0,0x10,0x20,0x40,0x40,
+    0xF0,0x90,0xF0,0x90,0xF0,
+    0xF0,0x90,0xF0,0x10,0xF0,
+    0xF0,0x90,0xF0,0x90,0x90,
+    0xE0,0x90,0xE0,0x90,0xE0,
+    0xF0,0x80,0x80,0x80,0xF0,
+    0xE0,0x90,0x90,0x90,0xE0,
+    0xF0,0x80,0xF0,0x80,0xF0,
+    0xF0,0x80,0xF0,0x80,0x80
+    ];
+
 pub struct Vm {
-    mem: [u8;0xfff],
+    pub mem: [u8;0xfff],
     pc: u16,
     reg: [u8;16],
     reg_i: u16,
@@ -18,8 +39,14 @@ pub struct Vm {
 impl Vm {
 
     pub fn new() -> Vm {
+
+        let mut mem:[u8;0xfff] = [0;0xfff];
+        for i in 0..5*16 as usize {
+            mem[i]=FONT[i];
+        }
+
         Vm {
-            mem: [0;0xfff],
+            mem: mem,
             pc: 0x200,
             reg: [0;16],
             reg_i: 0,
@@ -41,6 +68,15 @@ impl Vm {
         if self.reg_st>0 {
             self.reg_st-=1;
         }
+    }
+
+    pub fn debug(&mut self)  {
+        print!("{:0X} : {:0X}.{:0X} ",self.pc,self.mem[self.pc as usize],self.mem[self.pc as usize +1]);
+        for i in 0..16 as usize {
+            print!("V{:X}:{:X} ",i,self.reg[i]);
+        }
+        print!("SP: {:X} ({:X}) ",self.reg_sp,self.stack[self.reg_sp as usize]);
+        println!();
     }
 
     pub fn cycle(&mut self) -> bool {
@@ -65,6 +101,7 @@ impl Vm {
                         0xEE => { // RET
                             self.pc = self.stack[self.reg_sp as usize];
                             self.reg_sp-=1;
+                            return false;
                         },
                         _ => self.unknown_opcode()
                     }
@@ -75,8 +112,9 @@ impl Vm {
                 },
                 0x20 => {
                     // 2nnn - CALL addr 
-                    self.stack[self.reg_sp as usize] = self.pc ;
                     self.reg_sp+=1;
+                    self.stack[self.reg_sp as usize] = self.pc+2 ;
+                    self.pc = addr;
                     return false;
                 },
                 0x30 => { 
@@ -97,7 +135,8 @@ impl Vm {
                 },
                 0x70 => {
                     // 7xkk - ADD Vx, byte
-                    self.reg[x] += kk;
+
+                    self.reg[x] = ((self.reg[x] as u32 + kk as u32) &0xff) as u8;
                 },
                 0x80 => match instr2 & 0x0f {
                     0x00 => self.reg[x] = self.reg[y] ,  // 8xy0 - LD Vx, Vy
@@ -106,11 +145,11 @@ impl Vm {
                     0x03 => self.reg[x] ^= self.reg[y] , // 8xy3 - XOR Vx, Vy
                     0x04 => { // 8xy4 - ADD Vx, Vy
                         self.reg[0x0f] = if (self.reg[x] as u32 + self.reg[y] as u32)>0xff { 1 } else { 0 } ;
-                        self.reg[x] += self.reg[y];
+                        self.reg[x] = ((self.reg[x] as u32 + self.reg[y] as u32) & 0xff) as u8;
                     } ,
                     0x05 => { // 8xy5 - SUB Vx, Vy
                         self.reg[0x0f] =  if self.reg[x]>self.reg[y] { 1 } else { 0 }; 
-                        self.reg[x] -= self.reg[y];
+                        self.reg[x] = ((self.reg[x] as i32 - self.reg[y] as i32) &0xff) as u8;
                         
                     } ,
                     0x06 => {  // 8xy6 - SHR Vx {, Vy} 
@@ -124,7 +163,8 @@ impl Vm {
                     } ,
                     0x0e => {  // 8xy6 - SHL Vx {, Vy} 
                         self.reg[0x0f] = if self.reg[x]&0x80 == 0x80 { 1 } else { 0 } ;
-                        self.reg[x] <<=1;
+                        self.reg[x] &= 0x7f;
+                        self.reg[x] <<= 1;
                     },
                     _ => self.unknown_opcode()
                      
@@ -170,11 +210,11 @@ impl Vm {
                     0x33 => { 
                         // Fx33 - LD B, Vx
                         let mut number = self.reg[x];
-                        self.reg[self.reg_i as usize + 2 ] = number % 10;
+                        self.mem[self.reg_i as usize + 2 ] = number % 10;
                         number /=10;
-                        self.reg[self.reg_i as usize + 1 ] = number % 10;
+                        self.mem[self.reg_i as usize + 1 ] = number % 10;
                         number /=10;
-                        self.reg[self.reg_i as usize  ] = number % 10;
+                        self.mem[self.reg_i as usize  ] = number % 10;
                          
                     },
                     0x55 => {
@@ -211,11 +251,11 @@ impl Vm {
                 let mut line_wrap = (y+line) % ::HEIGHT;
                 let x_byte = x/8;
                 let addr1 = line_wrap*::WIDTH_BYTE + x_byte;;
-                let addr2 = line_wrap*::WIDTH_BYTE + (x_byte+1) & (::WIDTH_BYTE -1) ;
+                let addr2 = line_wrap*::WIDTH_BYTE + ((x_byte+1) & (::WIDTH_BYTE -1) );
 
                 let old_byte1 = self.screen[addr1 as usize];
-                let new_byte1 = self.mem[(self.reg_i+nibble as u16) as usize] >> (x%8);
-            
+                let new_byte1 = self.mem[(self.reg_i+line as u16) as usize] >> (x%8);
+         
                 self.screen[addr1 as usize] ^= new_byte1;
                 
                 if (old_byte1|new_byte1) != (old_byte1^new_byte1) {
@@ -224,12 +264,12 @@ impl Vm {
                 
                 if addr2!=addr1 {
                     let old_byte2 = self.screen[addr2 as usize];
-                    let new_byte2 = self.mem[(self.reg_i+nibble as u16) as usize] << (8-(x%8));
+                    let new_byte2 = ((self.mem[(self.reg_i+line as u16) as usize] as u32) << (8-(x%8)) & 0xff) as u8;
                     self.screen[addr2 as usize] ^= new_byte2;
                     if (old_byte2|new_byte2) != (old_byte2^new_byte2) {
                         self.reg[0x0f] = 1;
                     }
-                }      
+                }     
 
         }
     }

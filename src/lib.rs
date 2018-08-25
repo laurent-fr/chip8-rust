@@ -8,6 +8,7 @@ const SCALING:u32 = 12;
 const SCREEN_SIZE:usize = WIDTH as usize * HEIGHT as usize / 8;
 const WIDTH_BYTE:u32 = WIDTH/8;
 const VBL:u64 = 1_000_000_000u64 / 60 ;
+const SIMULATOR_SPEED:u64 = 1_000_000_000u64 / 1_760_000u64 ; 
 
 pub mod engine;
 pub mod vm;
