@@ -226,21 +226,20 @@ impl Vm {
                         self.mem[self.reg_i as usize + 1 ] = number % 10;
                         number /=10;
                         self.mem[self.reg_i as usize  ] = number % 10;
-                        // println!("{} {} {}",self.mem[self.reg_i as usize  ],self.mem[self.reg_i as usize + 1 ],self.mem[self.reg_i as usize + 2 ]  );
                     },
                     0x55 => {
                         // Fx55 - LD [I], Vx
                         for i in 0..x+1 as usize {
                             self.mem[self.reg_i as usize + i ] = self.reg[i];
                         }
-                        self.reg_i += (x+1) as u16;
+                        self.reg_i += (x+1) as u16; // Not in the spec (missing ?)
                     },
                     0x65 => {
                         // Fx65 - LD Vx, [I]
                          for i in 0.. x+1 as usize {
                             self.reg[i] = self.mem[self.reg_i as usize + i ] ;
                         }
-                        self.reg_i += (x+1) as u16;
+                        self.reg_i += (x+1) as u16;  // Not in the spec (missing ?)
                     },
                     _ => self.unknown_opcode()
 

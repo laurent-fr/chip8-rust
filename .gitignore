@@ -3,4 +3,3 @@
 *.dll
 .vscode
 Cargo.lock
-roms/*
