@@ -1,5 +1,7 @@
 # CHIP-8 Emulator in Rust
 
+![CHIP8](/img/blinky.png)
+
 CHIP-8 is an early virtual machine (1978) running games on the COSMAC ELF, a late 70's micro-computer powered by the CDP 1802 CPU. (https://en.wikipedia.org/wiki/COSMAC_ELF)
 
 Graphics are 1 color 64x32 pixels, the input device is a 4x4 keyboard :
