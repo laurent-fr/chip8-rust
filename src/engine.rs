@@ -55,10 +55,6 @@ impl<'a> Engine<'a> {
             for event in event_pump.poll_iter() {
                 match event {
 
-                    Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                        break 'running
-                    },
-
                     // ORIGINAL     PC KEYBOARD
                     // 1 2 3 C      1 2 3 4
                     // 4 5 6 D      A Z E R
@@ -75,7 +71,7 @@ impl<'a> Engine<'a> {
                             Keycode::Z => self.vm.key = 0x05 ,
                             Keycode::E => self.vm.key = 0x06 ,
                             Keycode::R => self.vm.key = 0x0d ,
-                            Keycode::A => self.vm.key = 0x07 ,
+                            Keycode::Q => self.vm.key = 0x07 ,
                             Keycode::S => self.vm.key = 0x08 ,
                             Keycode::D => self.vm.key = 0x09 ,
                             Keycode::F => self.vm.key = 0x0e ,
@@ -83,6 +79,7 @@ impl<'a> Engine<'a> {
                             Keycode::X => self.vm.key = 0x00 ,
                             Keycode::C => self.vm.key = 0x0b ,
                             Keycode::V => self.vm.key = 0x0f ,
+                            Keycode::Escape => break 'running ,
                             _ => self.vm.key = -1
                         }
                     },
@@ -91,12 +88,16 @@ impl<'a> Engine<'a> {
                         self.vm.key = -1
                     },
 
+                     Event::Quit {..}  => {
+                        break 'running
+                    }
+
                     _ => {}
                 }
             }
         
             ::std::thread::sleep(Duration::new(0, ::SIMULATOR_SPEED as u32));
-            // game loop ...
+           
 
             //self.vm.debug();            
 
@@ -109,6 +110,7 @@ impl<'a> Engine<'a> {
             if now + ::VBL < time::precise_time_ns() {
                 now = time::precise_time_ns();
                 self.vm.update_timers();
+                 canvas.present();
             }
             // sound
 
@@ -137,7 +139,7 @@ impl<'a> Engine<'a> {
                 self.draw_byte(canvas,col as i32,line as i32,self.vm.screen[addr]);
             }
         }
-        canvas.present();
+       
     }
 
 

@@ -71,11 +71,15 @@ impl Vm {
     }
 
     pub fn debug(&mut self)  {
-        print!("{:0X} : {:0X}.{:0X} ",self.pc,self.mem[self.pc as usize],self.mem[self.pc as usize +1]);
+        print!("{:04x} : {:02x}.{:02x} - ",self.pc,self.mem[self.pc as usize],self.mem[self.pc as usize +1]);
         for i in 0..16 as usize {
-            print!("V{:X}:{:X} ",i,self.reg[i]);
+            print!("V{:1X}:{:02x} ",i,self.reg[i]);
         }
-        print!("SP: {:X} ({:X}) ",self.reg_sp,self.stack[self.reg_sp as usize]);
+        print!("SP: {:02x} ({:04x}) ",self.reg_sp,self.stack[self.reg_sp as usize]);
+        print!("I: {:04x} ",self.reg_i);
+        print!("DT: {:02x} ",self.reg_dt);
+        print!("ST: {:02x} ",self.reg_st);
+        print!("KEY: {:02x} ",self.key);
         println!();
     }
 
@@ -99,9 +103,8 @@ impl Vm {
                             return true;
                         },
                         0xEE => { // RET
-                            self.pc = self.stack[self.reg_sp as usize];
                             self.reg_sp-=1;
-                            return false;
+                            self.pc = self.stack[self.reg_sp as usize];
                         },
                         _ => self.unknown_opcode()
                     }
@@ -112,8 +115,8 @@ impl Vm {
                 },
                 0x20 => {
                     // 2nnn - CALL addr 
+                    self.stack[self.reg_sp as usize] = self.pc;
                     self.reg_sp+=1;
-                    self.stack[self.reg_sp as usize] = self.pc+2 ;
                     self.pc = addr;
                     return false;
                 },
@@ -127,7 +130,7 @@ impl Vm {
                 },
                 0x50 => { 
                     // 5xkk - SE Vx, Vy 
-                    if self.reg[x] != self.reg[y] { self.pc+=2; }
+                    if self.reg[x] == self.reg[y] { self.pc+=2; }
                 },
                 0x60 => {
                     // 6xkk - LD Vx, byte
@@ -135,7 +138,6 @@ impl Vm {
                 },
                 0x70 => {
                     // 7xkk - ADD Vx, byte
-
                     self.reg[x] = ((self.reg[x] as u32 + kk as u32) &0xff) as u8;
                 },
                 0x80 => match instr2 & 0x0f {
@@ -144,25 +146,25 @@ impl Vm {
                     0x02 => self.reg[x] &= self.reg[y] ,// 8xy2 - AND Vx, Vy
                     0x03 => self.reg[x] ^= self.reg[y] , // 8xy3 - XOR Vx, Vy
                     0x04 => { // 8xy4 - ADD Vx, Vy
-                        self.reg[0x0f] = if (self.reg[x] as u32 + self.reg[y] as u32)>0xff { 1 } else { 0 } ;
-                        self.reg[x] = ((self.reg[x] as u32 + self.reg[y] as u32) & 0xff) as u8;
+                        let sum = self.reg[x] as u32 + self.reg[y] as u32;
+                        self.reg[0x0f] = if sum>0xff { 1 } else { 0 } ;
+                        self.reg[x] = (sum & 0xff) as u8;
                     } ,
                     0x05 => { // 8xy5 - SUB Vx, Vy
                         self.reg[0x0f] =  if self.reg[x]>self.reg[y] { 1 } else { 0 }; 
-                        self.reg[x] = ((self.reg[x] as i32 - self.reg[y] as i32) &0xff) as u8;
-                        
+                        self.reg[x] = (self.reg[x] as i8 - self.reg[y] as i8)  as u8;
                     } ,
                     0x06 => {  // 8xy6 - SHR Vx {, Vy} 
-                        self.reg[0x0f] = if self.reg[x]&0x01 == 1 { 1 } else { 0 } ;
+                        self.reg[0x0f] = self.reg[x]&0x01;
                         self.reg[x] >>=1;
                         
                     },
                     0x07 => { // 8xy7 - SUBN Vx, Vy
                         self.reg[0x0f] =  if self.reg[y]>self.reg[x] { 1 } else { 0 };
-                        self.reg[x] = self.reg[y] - self.reg[x];
+                        self.reg[x] = ((self.reg[y] as i8 - self.reg[x] as i8) ) as u8;
                     } ,
                     0x0e => {  // 8xy6 - SHL Vx {, Vy} 
-                        self.reg[0x0f] = if self.reg[x]&0x80 == 0x80 { 1 } else { 0 } ;
+                        self.reg[0x0f] = self.reg[x] >> 7;
                         self.reg[x] &= 0x7f;
                         self.reg[x] <<= 1;
                     },
@@ -190,11 +192,20 @@ impl Vm {
                     self.pc +=2;
                     return true;
                 },
-                0xe0 => {
-                    // Ex9E - SKP Vx
-                    if self.key as i32 == self.reg[x] as i32 {
-                        self.pc+=2;
-                    }
+                0xe0 => match kk {
+                        0x9e => { // Ex9E - SKP Vx
+                            if self.key as i32 == self.reg[x] as i32 {
+                                self.pc+=2;
+                            }
+                        },
+                        0xa1 => {
+                            // Ex9E - SKNP Vx
+                            if self.key as i32 != self.reg[x] as i32 {
+                                self.pc+=2;
+                            }
+                        },
+                        _ => self.unknown_opcode()
+                        
                 },
                 0xf0 => match instr2 {
                     0x07 => self.reg[x] = self.reg_dt , // LD Vx, DT
@@ -206,28 +217,30 @@ impl Vm {
                     0x15 => self.reg_dt = self.reg[x], // LD DT, Vx
                     0x18 => self.reg_st = self.reg[x], // LD ST, Vx
                     0x1e => self.reg_i += self.reg[x] as u16, // ADD I,Vx
-                    0x29 => self.reg_i = self.reg[x] as u16 * 6, // LD F, Vx 
+                    0x29 => self.reg_i = self.reg[x] as u16 * 5, // LD F, Vx 
                     0x33 => { 
-                        // Fx33 - LD B, Vx
+                        // Fx33 - LD B, Vx  
                         let mut number = self.reg[x];
                         self.mem[self.reg_i as usize + 2 ] = number % 10;
                         number /=10;
                         self.mem[self.reg_i as usize + 1 ] = number % 10;
                         number /=10;
                         self.mem[self.reg_i as usize  ] = number % 10;
-                         
+                        // println!("{} {} {}",self.mem[self.reg_i as usize  ],self.mem[self.reg_i as usize + 1 ],self.mem[self.reg_i as usize + 2 ]  );
                     },
                     0x55 => {
                         // Fx55 - LD [I], Vx
-                        for i in 0..x as usize {
+                        for i in 0..x+1 as usize {
                             self.mem[self.reg_i as usize + i ] = self.reg[i];
                         }
+                        self.reg_i += (x+1) as u16;
                     },
                     0x65 => {
                         // Fx65 - LD Vx, [I]
-                         for i in 0..x as usize {
+                         for i in 0.. x+1 as usize {
                             self.reg[i] = self.mem[self.reg_i as usize + i ] ;
                         }
+                        self.reg_i += (x+1) as u16;
                     },
                     _ => self.unknown_opcode()
 
@@ -275,8 +288,7 @@ impl Vm {
     }
 
     fn unknown_opcode(&self) {
-
-        panic!("Unknwown opcode !");
+        panic!("Unknwown opcode {:04x} : {:02x}.{:02x} !",self.pc,self.mem[self.pc as usize],self.mem[(self.pc+1) as usize]);
     }
 
 

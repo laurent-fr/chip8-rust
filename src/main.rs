@@ -23,8 +23,6 @@ fn main() {
 
     engine.run();
 
-
-
 }
 
 fn load_rom(vm:&mut Vm,filename: &String) {
