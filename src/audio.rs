@@ -15,18 +15,26 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-extern crate sdl2;
-extern crate time;
-extern crate rand;
+// see https://github.com/Rust-SDL2/rust-sdl2/blob/master/examples/audio-squarewave.rs
 
-const WIDTH:u32 = 64;
-const HEIGHT:u32 = 32 ;
-const SCALING:u32 = 12;
-const SCREEN_SIZE:usize = WIDTH as usize * HEIGHT as usize / 8;
-const WIDTH_BYTE:u32 = WIDTH/8;
-const VBL:u64 = 1_000_000_000u64 / 60 ;
-const SIMULATOR_SPEED:u64 = 1_000_000_000u64 / 100_000_000u64 ; 
+use sdl2::audio::AudioCallback;
 
-pub mod engine;
-pub mod audio;
-pub mod vm;
+pub struct SquareWave {
+    pub phase_inc: f32,
+    pub phase: f32,
+    pub volume: f32
+}
+
+
+impl AudioCallback for SquareWave {
+
+    type Channel = f32;
+
+    fn callback(&mut self, out: &mut [f32]) {
+        // Generate a square wave
+        for x in out.iter_mut() {
+            *x = if self.phase <= 0.5 { self.volume } else { -self.volume };
+            self.phase = (self.phase + self.phase_inc) % 1.0;
+        }
+    }
+}

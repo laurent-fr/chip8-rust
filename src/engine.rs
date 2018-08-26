@@ -25,10 +25,11 @@ use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::rect::Rect;
 
+use sdl2::audio::AudioSpecDesired;
+
 use std::time::Duration;
 
-
-
+use audio::SquareWave;
 use vm::Vm;
 
 pub struct Engine<'a> {
@@ -48,7 +49,8 @@ impl<'a> Engine<'a> {
 
     pub fn run(&mut self) {
         let sdl_context = sdl2::init().unwrap();
-        let _audio_subsystem = sdl_context.audio().unwrap();
+
+        // initialize SDL2 video
         let video_subsystem = sdl_context.video().unwrap();
         let window = video_subsystem.window("CHIP-8 Emulator", ::WIDTH*::SCALING, ::HEIGHT*::SCALING)
             .position_centered()
@@ -58,6 +60,25 @@ impl<'a> Engine<'a> {
 
         let mut canvas = window.into_canvas().build().unwrap();
 
+        // initialize SDL2 audio
+        let audio_subsystem = sdl_context.audio().unwrap();
+
+        let desired_spec = AudioSpecDesired {
+            freq: Some(44_100),
+            channels: Some(1),  // mono
+            samples: None       // default sample size
+        };
+
+        let audio_device = audio_subsystem.open_playback(None, &desired_spec, |spec| {
+            // initialize the audio callback
+            SquareWave {
+                phase_inc: 440.0 / spec.freq as f32,
+                phase: 0.0,
+                volume: 0.25
+            }
+        }).unwrap();
+
+        // clear screen
         canvas.set_draw_color(Color::RGB(BK.0, BK.1, BK.2));
         canvas.clear();
         canvas.present();
@@ -66,8 +87,7 @@ impl<'a> Engine<'a> {
 
         let mut now = time::precise_time_ns();
 
-        self.draw_screen(&mut canvas);
-
+        // main loop
         'running: loop {
             for event in event_pump.poll_iter() {
                 match event {
@@ -129,7 +149,13 @@ impl<'a> Engine<'a> {
                 self.vm.update_timers();
                  canvas.present();
             }
+
             // sound
+            if self.vm.reg_st>0 {
+                audio_device.resume();
+            } else {
+                audio_device.pause();
+            }
 
         }
     }
@@ -161,3 +187,5 @@ impl<'a> Engine<'a> {
 
 
 }
+
+

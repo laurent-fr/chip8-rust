@@ -48,7 +48,7 @@ pub struct Vm {
     reg_sp: u16,
     stack: [u16;16],
     reg_dt:u8,
-    reg_st:u8,
+    pub reg_st:u8,
     pub screen: [u8; ::SCREEN_SIZE],
     pub key:i8
 }
